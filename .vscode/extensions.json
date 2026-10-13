@@ -1,0 +1,7 @@
+{
+    "recommendations": [
+        "stmicroelectronics.stm32cube-ide-clangd",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools"
+    ]
+}

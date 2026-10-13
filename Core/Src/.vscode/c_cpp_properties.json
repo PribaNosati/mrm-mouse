@@ -1,0 +1,22 @@
+
+{
+  "configurations": [
+    {
+      "name": "STM32",
+      "includePath": [
+        "${workspaceFolder}/**"
+      ],
+      "browse": {
+        "path": [
+          "${workspaceFolder}/**"
+        ]
+      },
+      "defines": [
+        "USE_HAL_DRIVER",
+        "STM32G431xx"
+      ],
+      "intelliSenseMode": "gcc-arm"
+    }
+  ],
+  "version": 4
+}
