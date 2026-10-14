@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Mouse: Debug",
+            "type": "stlinkgdbtarget",
+            "request": "launch",
+            "origin": "snippet",
+            "cwd": "${workspaceFolder}",
+            "deviceName": "STM32G0B1CCT6",
+            "deviceCore": "Cortex-M0+",
+            "preBuild": "",
+            "program": "${workspaceFolder}/build/Debug/mrm-mouse.elf",
+            "imagesAndSymbols": [
+                {
+                    "imageFileName": "${workspaceFolder}/build/Debug/mrm-mouse.elf"
+                }
+            ],
+            "runEntry": "main",
+            "serverInterface": "SWD",
+            "serverInterfaceFrequency": "140",
+            "serverReset": "Connect under reset"
+        }
+    ]
+}
