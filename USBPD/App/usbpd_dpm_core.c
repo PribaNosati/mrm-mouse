@@ -348,7 +348,24 @@ void USBPD_DPM_Run(void)
 #else /* !USE_STM32_UTILITY_OS */
   do
   {
-    USBPD_DPM_Poll();
+    if ((HAL_GetTick() - DPM_Sleep_start[USBPD_PORT_COUNT]) >= DPM_Sleep_time[USBPD_PORT_COUNT])
+    {
+      DPM_Sleep_time[USBPD_PORT_COUNT] = USBPD_CAD_Process();
+      DPM_Sleep_start[USBPD_PORT_COUNT] = HAL_GetTick();
+    }
+
+    uint32_t port = 0;
+
+    for (port = 0; port < USBPD_PORT_COUNT; port++)
+    {
+      if ((HAL_GetTick() - DPM_Sleep_start[port]) >= DPM_Sleep_time[port])
+      {
+        DPM_Sleep_time[port] =
+          USBPD_PE_StateMachine_SNK(port);
+        DPM_Sleep_start[port] = HAL_GetTick();
+      }
+    }
+
     USBPD_DPM_UserExecute(NULL);
 
   } while (1u == 1u);
