@@ -115,7 +115,11 @@
 USBPD_StatusTypeDef USBPD_PWR_IF_Init(void)
 {
 /* USER CODE BEGIN USBPD_PWR_IF_Init */
-  return USBPD_ERROR;
+  PORT0_PDO_ListSNK[0] = USBPD_SINK_PDO_5V;
+  PORT0_PDO_ListSNK[1] = USBPD_SINK_PDO_9V;
+  if (BSP_USBPD_PWR_Init(USBPD_PORT_0) != BSP_ERROR_NONE) return USBPD_ERROR;
+  return (BSP_USBPD_PWR_VBUSInit(USBPD_PORT_0) == BSP_ERROR_NONE) ?
+          USBPD_OK : USBPD_ERROR;
 /* USER CODE END USBPD_PWR_IF_Init */
 }
 
@@ -129,7 +133,7 @@ USBPD_StatusTypeDef USBPD_PWR_IF_SupplyReady(uint8_t PortNum, USBPD_VSAFE_Status
 {
 /* USER CODE BEGIN USBPD_PWR_IF_SupplyReady */
   USBPD_StatusTypeDef status = USBPD_ERROR;
-  uint32_t _voltage;
+  uint32_t _voltage = 0U;
 
   /* check for valid port */
   if (!USBPD_PORT_IsValid(PortNum))
@@ -137,7 +141,8 @@ USBPD_StatusTypeDef USBPD_PWR_IF_SupplyReady(uint8_t PortNum, USBPD_VSAFE_Status
     return USBPD_ERROR;
   }
 
-  BSP_USBPD_PWR_VBUSGetVoltage(PortNum, &_voltage);
+  if (BSP_USBPD_PWR_VBUSGetVoltage(PortNum, &_voltage) != BSP_ERROR_NONE)
+    return USBPD_ERROR;
   if (USBPD_VSAFE_0V == Vsafe)
   {
     /* Vsafe0V */

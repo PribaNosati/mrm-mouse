@@ -215,7 +215,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
-  hadc1.Init.SamplingTimeCommon1 = ADC_SAMPLETIME_1CYCLE_5;
+  hadc1.Init.SamplingTimeCommon1 = ADC_SAMPLETIME_160CYCLES_5;
   hadc1.Init.SamplingTimeCommon2 = ADC_SAMPLETIME_1CYCLE_5;
   hadc1.Init.OversamplingMode = DISABLE;
   hadc1.Init.TriggerFrequencyMode = ADC_TRIGGER_FREQ_HIGH;
@@ -234,7 +234,15 @@ static void MX_ADC1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
-
+  if (HAL_ADCEx_Calibration_Start(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* Keep the internal reference enabled and allow it to settle before PD
+     starts sampling VBUS. Its factory calibration compensates VDDA drift. */
+  LL_ADC_SetCommonPathInternalCh(__LL_ADC_COMMON_INSTANCE(ADC1),
+                                LL_ADC_PATH_INTERNAL_VREFINT);
+  HAL_Delay(1U);
   /* USER CODE END ADC1_Init 2 */
 
 }

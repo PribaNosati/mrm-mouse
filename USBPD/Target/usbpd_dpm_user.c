@@ -37,6 +37,8 @@
 /* USER CODE BEGIN Includes */
 #include "app_usb_bridge.h"
 #include "common.h"
+#include "usbpd_sink_policy.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /** @addtogroup STM32_USBPD_APPLICATION
@@ -106,7 +108,11 @@
   */
 
 /* USER CODE BEGIN Private_Variables */
-
+static uint32_t sink_source_pdos[USBPD_PORT_COUNT][USBPD_SINK_MAX_SOURCE_PDOS];
+static uint32_t sink_source_pdo_count[USBPD_PORT_COUNT];
+static UsbPdSinkRequest sink_requests[USBPD_PORT_COUNT];
+/* 0: no accepted request, 1: accepted/waiting for PS_RDY, 2: sink ready. */
+static uint8_t sink_contract_ready[USBPD_PORT_COUNT];
 /* USER CODE END Private_Variables */
 /**
   * @}
@@ -128,7 +134,11 @@
   * @{
   */
 /* USER CODE BEGIN USBPD_USER_EXPORTED_FUNCTIONS */
-
+USBPD_FunctionalState USBPD_DPM_Is9V3AReady(uint8_t PortNum)
+{
+  return ((PortNum < USBPD_PORT_COUNT) && (sink_contract_ready[PortNum] == 2U) &&
+          sink_requests[PortNum].target_available) ? USBPD_ENABLE : USBPD_DISABLE;
+}
 /* USER CODE END USBPD_USER_EXPORTED_FUNCTIONS */
 
 /** @defgroup USBPD_USER_EXPORTED_FUNCTIONS_GROUP1 USBPD USER Exported Functions called by DPM CORE
@@ -145,7 +155,10 @@
 USBPD_StatusTypeDef USBPD_DPM_UserInit(void)
 {
 /* USER CODE BEGIN USBPD_DPM_UserInit */
-  return USBPD_OK;
+  memset(sink_source_pdo_count, 0, sizeof(sink_source_pdo_count));
+  memset(sink_requests, 0, sizeof(sink_requests));
+  memset(sink_contract_ready, 0, sizeof(sink_contract_ready));
+  return USBPD_PWR_IF_Init();
 /* USER CODE END USBPD_DPM_UserInit */
 }
 
@@ -196,7 +209,14 @@ void USBPD_DPM_UserExecute(void const *argument)
 void USBPD_DPM_UserCableDetection(uint8_t PortNum, USBPD_CAD_EVENT State)
 {
 /* USER CODE BEGIN USBPD_DPM_UserCableDetection */
-DPM_USER_DEBUG_TRACE(PortNum, "ADVICE: update USBPD_DPM_UserCableDetection");
+  if ((PortNum < USBPD_PORT_COUNT) &&
+      ((State == USBPD_CAD_EVENT_DETACHED) ||
+       (State == USBPD_CAD_EVENT_ATTACHED)))
+  {
+    sink_source_pdo_count[PortNum] = 0U;
+    sink_requests[PortNum] = (UsbPdSinkRequest){0};
+    sink_contract_ready[PortNum] = 0U;
+  }
 /* USER CODE END USBPD_DPM_UserCableDetection */
 }
 
@@ -229,9 +249,24 @@ void USBPD_DPM_UserTimerCounter(uint8_t PortNum)
 void USBPD_DPM_Notification(uint8_t PortNum, USBPD_NotifyEventValue_TypeDef EventVal)
 {
 /* USER CODE BEGIN USBPD_DPM_Notification */
+  if (PortNum >= USBPD_PORT_COUNT) return;
   /* Manage event notified by the stack? */
   switch(EventVal)
   {
+    case USBPD_NOTIFY_REQUEST_ACCEPTED:
+      sink_contract_ready[PortNum] = 1U;
+      break;
+    case USBPD_NOTIFY_STATE_SNK_READY:
+      if ((sink_contract_ready[PortNum] != 0U) &&
+          (sink_requests[PortNum].rdo != 0U)) sink_contract_ready[PortNum] = 2U;
+      break;
+    case USBPD_NOTIFY_REQUEST_REJECTED:
+    case USBPD_NOTIFY_REQUEST_WAIT:
+    case USBPD_NOTIFY_HARDRESET_RX:
+    case USBPD_NOTIFY_HARDRESET_TX:
+    case USBPD_NOTIFY_PE_DISABLED:
+      sink_contract_ready[PortNum] = 0U;
+      break;
 //    case USBPD_NOTIFY_POWER_EXPLICIT_CONTRACT :
 //      break;
 //    case USBPD_NOTIFY_REQUEST_ACCEPTED:
@@ -281,7 +316,14 @@ void USBPD_DPM_Notification(uint8_t PortNum, USBPD_NotifyEventValue_TypeDef Even
 void USBPD_DPM_HardReset(uint8_t PortNum, USBPD_PortPowerRole_TypeDef CurrentRole, USBPD_HR_Status_TypeDef Status)
 {
 /* USER CODE BEGIN USBPD_DPM_HardReset */
-  DPM_USER_DEBUG_TRACE(PortNum, "ADVICE: update USBPD_DPM_HardReset");
+  (void)CurrentRole;
+  (void)Status;
+  if (PortNum < USBPD_PORT_COUNT)
+  {
+    sink_source_pdo_count[PortNum] = 0U;
+    sink_requests[PortNum] = (UsbPdSinkRequest){0};
+    sink_contract_ready[PortNum] = 0U;
+  }
 /* USER CODE END USBPD_DPM_HardReset */
 }
 
@@ -296,9 +338,20 @@ void USBPD_DPM_HardReset(uint8_t PortNum, USBPD_PortPowerRole_TypeDef CurrentRol
 void USBPD_DPM_GetDataInfo(uint8_t PortNum, USBPD_CORE_DataInfoType_TypeDef DataId, uint8_t *Ptr, uint32_t *Size)
 {
 /* USER CODE BEGIN USBPD_DPM_GetDataInfo */
+  if (Size == NULL) return;
+  *Size = 0U;
+  if ((PortNum >= USBPD_PORT_COUNT) || (Ptr == NULL)) return;
   /* Check type of information targeted by request */
   switch(DataId)
   {
+  case USBPD_CORE_DATATYPE_SNK_PDO:
+    *Size = PORT0_NB_SINKPDO * sizeof(uint32_t);
+    memcpy(Ptr, PORT0_PDO_ListSNK, *Size);
+    break;
+  case USBPD_CORE_DATATYPE_REQ_VOLTAGE:
+    *Size = sizeof(uint32_t);
+    memcpy(Ptr, &sink_requests[PortNum].voltage_mv, *Size);
+    break;
 //  case USBPD_CORE_DATATYPE_SNK_PDO:           /*!< Handling of port Sink PDO, requested by get sink capa*/
     // break;
 //  case USBPD_CORE_EXTENDED_CAPA:              /*!< Source Extended capability message content          */
@@ -333,9 +386,26 @@ void USBPD_DPM_GetDataInfo(uint8_t PortNum, USBPD_CORE_DataInfoType_TypeDef Data
 void USBPD_DPM_SetDataInfo(uint8_t PortNum, USBPD_CORE_DataInfoType_TypeDef DataId, uint8_t *Ptr, uint32_t Size)
 {
 /* USER CODE BEGIN USBPD_DPM_SetDataInfo */
+  if (PortNum >= USBPD_PORT_COUNT) return;
   /* Check type of information targeted by request */
   switch(DataId)
   {
+  case USBPD_CORE_DATATYPE_RCV_SRC_PDO:
+    sink_source_pdo_count[PortNum] = 0U;
+    sink_contract_ready[PortNum] = 0U;
+    sink_requests[PortNum] = (UsbPdSinkRequest){0};
+    if ((Ptr != NULL) && (Size > 0U) &&
+        (Size <= sizeof(sink_source_pdos[PortNum])) &&
+        ((Size % sizeof(uint32_t)) == 0U))
+    {
+      memcpy(sink_source_pdos[PortNum], Ptr, Size);
+      sink_source_pdo_count[PortNum] = Size / sizeof(uint32_t);
+    }
+    break;
+  case USBPD_CORE_DATATYPE_RDO_POSITION:
+    sink_requests[PortNum] = (UsbPdSinkRequest){0};
+    sink_contract_ready[PortNum] = 0U;
+    break;
 //  case USBPD_CORE_DATATYPE_RDO_POSITION:      /*!< Reset the PDO position selected by the sink only */
     // break;
 //  case USBPD_CORE_DATATYPE_RCV_SRC_PDO:       /*!< Storage of Received Source PDO values        */
@@ -376,7 +446,21 @@ void USBPD_DPM_SetDataInfo(uint8_t PortNum, USBPD_CORE_DataInfoType_TypeDef Data
 void USBPD_DPM_SNK_EvaluateCapabilities(uint8_t PortNum, uint32_t *PtrRequestData, USBPD_CORE_PDO_Type_TypeDef *PtrPowerObjectType)
 {
 /* USER CODE BEGIN USBPD_DPM_SNK_EvaluateCapabilities */
-  DPM_USER_DEBUG_TRACE(PortNum, "ADVICE: update USBPD_DPM_SNK_EvaluateCapabilities");
+  if ((PtrRequestData == NULL) || (PtrPowerObjectType == NULL)) return;
+  *PtrRequestData = 0U;
+  *PtrPowerObjectType = USBPD_CORE_PDO_TYPE_FIXED;
+  if (PortNum >= USBPD_PORT_COUNT) return;
+  sink_contract_ready[PortNum] = 0U;
+  if (UsbPdSink_SelectRequest(sink_source_pdos[PortNum],
+                              sink_source_pdo_count[PortNum],
+                              &sink_requests[PortNum]))
+  {
+    *PtrRequestData = sink_requests[PortNum].rdo;
+    DPM_USER_DEBUG_TRACE(PortNum, "Request %lumV %lumA PDO%u",
+                         (unsigned long)sink_requests[PortNum].voltage_mv,
+                         (unsigned long)sink_requests[PortNum].current_ma,
+                         sink_requests[PortNum].object_position);
+  }
 /* USER CODE END USBPD_DPM_SNK_EvaluateCapabilities */
 }
 

@@ -29,14 +29,17 @@
 #include "usbpd_def.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "usbpd_sink_policy.h"
 /* USER CODE END Includes */
 
 /* Define   ------------------------------------------------------------------*/
 #define PORT0_NB_SOURCEPDO         0U   /* Number of Source PDOs (applicable for port 0)   */
 #define PORT0_NB_SINKPDO           0U   /* Number of Sink PDOs (applicable for port 0)     */
 /* USER CODE BEGIN Define */
-
+/* Keep the custom fixed profiles when CubeMX regenerates this file. The
+   list is populated in USBPD_PWR_IF_Init before the PD tasks start. */
+#undef PORT0_NB_SINKPDO
+#define PORT0_NB_SINKPDO 2U
 /* USER CODE END Define */
 
 /* Exported typedef ----------------------------------------------------------*/
@@ -51,7 +54,7 @@
 /* USER CODE BEGIN Exported_Define */
 
 #define USBPD_CORE_PDO_SRC_FIXED_MAX_CURRENT 3
-#define USBPD_CORE_PDO_SNK_FIXED_MAX_CURRENT 1500
+#define USBPD_CORE_PDO_SNK_FIXED_MAX_CURRENT USBPD_SINK_TARGET_MA
 
 /* USER CODE END Exported_Define */
 

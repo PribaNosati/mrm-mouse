@@ -89,6 +89,32 @@ commands and wait for replies. Overlong lines are discarded. After receive-ring
 overflow, send a line ending before resending commands; queued input is dropped
 to avoid executing truncated commands.
 
+## USB-C Power Delivery
+
+The USB-C port is a sink. On receiving the charger's source capabilities, the
+firmware requests a fixed 9 V / 3 A profile if offered. It selects the actual
+position of that profile, rather than assuming it is PDO 2. PPS/APDO profiles,
+higher voltages and 9 V offers below 3 A are not selected. If the target is
+unavailable, it requests fixed 5 V at up to 500 mA, bounded by the advertised
+source current, with the capability-mismatch flag set.
+
+VBUS is measured on PA5 (`ADC_VBUS`, ADC1 channel 5) through 200 kOhm from VBUS
+and 10.2 kOhm to GND. ADC1 uses 12-bit single conversions, 160.5-cycle Common 1
+sampling and startup calibration. Firmware also samples the internal reference
+to compensate the conversion for VDDA. At 9 V, PA5 should measure about 437 mV.
+The fixed sink PDOs are installed in `USBPD_PWR_IF_Init` inside a USER CODE
+section, so they survive regeneration. The longer ADC sampling time is saved in
+the `.ioc` file as well.
+
+`USBPD_DPM_Is9V3AReady(0)` returns enabled only after the 9 V / 3 A request is
+accepted and the policy engine reports sink ready. Detach, hard reset, rejected
+requests and disabled PD clear that state. This reports protocol readiness; it
+does not implement a physical current limiter or change the motor enable policy.
+
+After flashing, reconnect a PD charger offering fixed 9 V / 3 A and check VBUS
+with a meter or USB-PD analyzer. Verify negotiation, 5 V fallback, and reconnect
+on the board; compilation and host tests do not verify the physical power path.
+
 ## Build and verification
 
 VS Code completion and navigation use the installed STM32Cube clangd server
@@ -119,7 +145,8 @@ From a Visual Studio x64 Native Tools command prompt:
 Tests\run_host_tests.cmd
 ```
 
-Five native test programs cover CAN validation and RX buffering, sensor values,
+Six native test programs cover PD profile selection and VBUS conversion,
+CAN validation and RX buffering, sensor values,
 USB buffer ownership and disconnects, command routing and overflow recovery,
 bounded waits and background polling, and all four PWM channels including the
 finite motor sweep. Tests use mocked peripherals and do not access hardware.

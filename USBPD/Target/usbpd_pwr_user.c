@@ -27,7 +27,8 @@
 #endif /* _TRACE */
 
 /* USER CODE BEGIN include */
-
+#include "main.h"
+#include "usbpd_vbus.h"
 /* USER CODE END include */
 
 /** @addtogroup BSP
@@ -76,7 +77,7 @@
   * @{
   */
 /* USER CODE BEGIN POWER_Private_Variables */
-
+extern ADC_HandleTypeDef hadc1;
 /* USER CODE END POWER_Private_Variables */
 /**
   * @}
@@ -86,7 +87,20 @@
   * @{
   */
 /* USER CODE BEGIN POWER_Private_Prototypes */
-
+static HAL_StatusTypeDef sample_adc(uint32_t channel, uint32_t *raw)
+{
+  ADC_ChannelConfTypeDef config = {0};
+  HAL_StatusTypeDef status;
+  config.Channel = channel;
+  config.Rank = ADC_REGULAR_RANK_1;
+  config.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
+  if (HAL_ADC_ConfigChannel(&hadc1, &config) != HAL_OK) return HAL_ERROR;
+  if (HAL_ADC_Start(&hadc1) != HAL_OK) return HAL_ERROR;
+  status = HAL_ADC_PollForConversion(&hadc1, 2U);
+  if (status == HAL_OK) *raw = HAL_ADC_GetValue(&hadc1);
+  if (HAL_ADC_Stop(&hadc1) != HAL_OK) return HAL_ERROR;
+  return status;
+}
 /* USER CODE END POWER_Private_Prototypes */
 /**
   * @}
@@ -915,20 +929,18 @@ __weak int32_t BSP_USBPD_PWR_VBUSSetVoltage_APDO(uint32_t Instance,
 __weak int32_t BSP_USBPD_PWR_VBUSGetVoltage(uint32_t Instance, uint32_t *pVoltage)
 {
   /* USER CODE BEGIN BSP_USBPD_PWR_VBUSGetVoltage */
-  /* Check if instance is valid       */
-  int32_t ret = BSP_ERROR_NONE;
-
-  if ((Instance >= USBPD_PWR_INSTANCES_NBR) || (NULL == pVoltage))
-  {
-    ret = BSP_ERROR_WRONG_PARAM;
-  }
-  *pVoltage = 0u;
-  /* !!!
-      BSP_PWR_VBUSGetVoltage is obsolete. You may need to move your user code
-      inside this function
-   !!! */
-  PWR_DEBUG_TRACE(Instance, "ADVICE: Update BSP_USBPD_PWR_VBUSGetVoltage");
-  return ret;
+  uint32_t raw_vbus, raw_vref, vdda_mv;
+  if ((Instance != USBPD_PWR_TYPE_C_PORT_1) || (pVoltage == NULL))
+    return BSP_ERROR_WRONG_PARAM;
+  *pVoltage = 0U;
+  if ((sample_adc(ADC_CHANNEL_VREFINT, &raw_vref) != HAL_OK) ||
+      (raw_vref == 0U) ||
+      (sample_adc(ADC_CHANNEL_5, &raw_vbus) != HAL_OK))
+    return BSP_ERROR_PERIPH_FAILURE;
+  vdda_mv = __HAL_ADC_CALC_VREFANALOG_VOLTAGE(raw_vref, ADC_RESOLUTION_12B);
+  if ((vdda_mv < 2000U) || (vdda_mv > 3600U)) return BSP_ERROR_PERIPH_FAILURE;
+  *pVoltage = UsbPdVbus_FromAdc(raw_vbus, vdda_mv);
+  return BSP_ERROR_NONE;
   /* USER CODE END BSP_USBPD_PWR_VBUSGetVoltage */
 }
 

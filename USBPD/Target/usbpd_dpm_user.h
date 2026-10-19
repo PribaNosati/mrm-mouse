@@ -90,6 +90,8 @@ typedef struct
   * @{
   */
 USBPD_StatusTypeDef USBPD_DPM_UserInit(void);
+/* True only after the policy engine reports the requested 9 V / 3 A contract ready. */
+USBPD_FunctionalState USBPD_DPM_Is9V3AReady(uint8_t PortNum);
 void                USBPD_DPM_WaitForTime(uint32_t Time);
 void                USBPD_DPM_UserExecute(void const *argument);
 void                USBPD_DPM_UserCableDetection(uint8_t PortNum, USBPD_CAD_EVENT State);

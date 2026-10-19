@@ -51,6 +51,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/can_devices.c
     Core/Src/motor_control.c
     Core/Src/common.c
+    Core/Src/usbpd_sink_policy.c
 )
 
 # Add include paths

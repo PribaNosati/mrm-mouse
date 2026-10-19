@@ -2,6 +2,8 @@
 setlocal
 cd /d "%~dp0.."
 if not exist build mkdir build
+cl /nologo /W3 /ICore\Inc Core\Src\usbpd_sink_policy.c Tests\test_usbpd_sink_policy.c /Fe:build\usbpd_sink_policy_tests.exe /Fo:build\ || exit /b 1
+build\usbpd_sink_policy_tests.exe || exit /b 1
 cl /nologo /W3 /D_CRT_SECURE_NO_WARNINGS /ITests\can_bus\mocks /ICore\Inc Core\Src\can_bus.c Core\Src\can_devices.c Tests\can_bus\test_can_bus.c /Fe:build\can_bus_tests.exe /Fo:build\ || exit /b 1
 build\can_bus_tests.exe || exit /b 1
 cl /nologo /W3 /D_CRT_SECURE_NO_WARNINGS /ICore\Inc Core\Src\can_devices.c Tests\can_bus\test_can_devices.c /Fe:build\can_devices_tests.exe /Fo:build\ || exit /b 1
