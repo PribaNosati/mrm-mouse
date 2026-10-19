@@ -3,6 +3,7 @@
 #include "motor_control.h"
 #include "can_devices.h"
 #include "common.h"
+#include "lidar.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -135,6 +136,7 @@ static void process_line(char *line)
         reply("CAN STD|EXT <hex-id> [0..8 hex bytes] | CAN STATUS | CAN RX ON|OFF|STATUS\r\n");
         reply("DEVICES <start-id> <end-id> | CHANGE <current-id> <new-id>\r\n");
         reply("LID <1-16> START|STOP | COL ILLUMINATION <0-3>\r\n");
+        reply("LIDAR <1-16> DISTANCE\r\n");
     }
     else if (strcmp(command, "MOT") == 0)
     {
@@ -188,6 +190,52 @@ static void process_line(char *line)
         reply(MotorControl_StartTest() ? "OK TEST STARTED\r\n" :
               "ERR motors disabled; send ENABLE\r\n");
     }
+    else if (strcmp(command, "LIDAR") == 0)
+    {
+        char *end;
+        char response[160];
+        unsigned long device_nr;
+
+        arg1 = strtok(NULL, " \t");
+        arg2 = strtok(NULL, " \t");
+        if ((arg1 == NULL) || (arg2 == NULL) ||
+            (strcmp(arg2, "DISTANCE") != 0) ||
+            (strtok(NULL, " \t") != NULL))
+        {
+            reply("ERR usage: LIDAR <1-16> DISTANCE\r\n");
+            return;
+        }
+        device_nr = strtoul(arg1, &end, 10);
+        if ((arg1[0] == '-') || (*end != '\0') ||
+            (device_nr < 1U) || (device_nr > LIDAR_COUNT))
+        {
+            reply("ERR device number=1..16\r\n");
+            return;
+        }
+        if (!lidarIsStarted((uint8_t)device_nr))
+        {
+            lidarStart((uint8_t)device_nr, true, response, sizeof(response));
+            if (!lidarIsStarted((uint8_t)device_nr))
+            {
+                reply(response);
+                return;
+            }
+        }
+
+        uint32_t identifier = 0x180U + (2U * ((uint32_t)device_nr - 1U));
+        for (uint32_t i = 0U; i < can_devices_count; ++i)
+        {
+            if (!can_devices[i].extended && (can_devices[i].type == LID) &&
+                (can_devices[i].id_in == identifier))
+            {
+                snprintf(response, sizeof(response), "OK LIDAR %lu DISTANCE %u\r\n",
+                         device_nr, (unsigned int)can_devices[i].value.lid_distance);
+                reply(response);
+                return;
+            }
+        }
+        reply("ERR no active LID sensor; run DEVICES first\r\n");
+    }
     else if (strcmp(command, "LID") == 0)
     {
         arg1 = strtok(NULL, " \t");
@@ -212,15 +260,9 @@ static void process_line(char *line)
         }
         else
         {
-            char arguments[32];
             char response[160];
-            uint32_t identifier = 0x180U + (2U * ((uint32_t)device_nr - 1U));
-            // 0x10 - Start measurement command for LIDAR.
-            snprintf(arguments, sizeof(arguments), "STD 0x%lX %02X",
-                     (unsigned long)identifier,
-                     strcmp(arg2, "START") == 0 ? COMMAND_SENSORS_MEASURE_CONTINUOUS :
-                                                COMMAND_SENSORS_MEASURE_STOP);
-            CanBus_Command(arguments, response, sizeof(response));
+            lidarStart((uint8_t)device_nr, strcmp(arg2, "START") == 0,
+                       response, sizeof(response));
             reply(response);
         }
     }

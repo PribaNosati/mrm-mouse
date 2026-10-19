@@ -40,7 +40,7 @@ void MotorControl_Enable(bool enable)
 
 void MotorControl_Init(void)
 {
-    MotorControl_Enable(false);
+    MotorControl_Enable(true);
     for (uint8_t i = 0U; i < MOTOR_COUNT; ++i)
     {
         HAL_GPIO_WritePin(direction_ports[i], direction_pins[i], GPIO_PIN_RESET);

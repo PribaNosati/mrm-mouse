@@ -30,6 +30,7 @@ speeds are decimal; CAN identifiers, payload bytes and CHANGE selectors are hex.
 | `CHANGE <current-id> <selector>` | Send command 40 plus an 8-bit ID selector; current ID 0..7FF, selector 0..FF (0..F for a discovered lidar). |
 | `LID <1-16> START` | Start continuous lidar measurements at ID 180 + 2 * (number - 1). |
 | `LID <1-16> STOP` | Stop measurements at the corresponding lidar ID. |
+| `LIDAR <1-16> DISTANCE` | Start the lidar if needed, then return its latest stored distance as `OK LIDAR <number> DISTANCE <value>`. Requires the sensor in the discovered device table; the value is zero until its first measurement arrives. |
 | `COL ILLUMINATION <0-3>` | Send command 50 plus the illumination level to every discovered COL sensor, preserving its standard/extended format. |
 
 Example session:
@@ -64,7 +65,7 @@ MOT and REF devices are discovered, with their traffic available as raw reports.
 Mouse has four hardware PWM channels on TIM2: motor 1 PA15, motor 2 PB3,
 motor 3 PB10, motor 4 PC7. Direction outputs use the corresponding MOTORx_DIR
 definitions in `main.h`; PD3 controls driver sleep. The existing 10 kHz PWM
-configuration and low output polarity are retained. Drivers start disabled with
+configuration and low output polarity are retained. Drivers start enabled with
 zero commanded speeds. Fox's other four motors and DAC current-limit outputs
 are not present on this board.
 

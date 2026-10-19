@@ -14,7 +14,7 @@ static unsigned sent_count;
 static bool motors_enabled,can_busy;
 static int16_t motor_speeds[4];
 static unsigned delay_count,poll_count;
-void CanBus_Command(const char *text,char *reply,size_t size){calls++;snprintf(arguments,sizeof(arguments),"%s",text?text:"");snprintf(reply,size,"OK CAN TEST\r\n");}
+void CanBus_Command(const char *text,char *reply,size_t size){calls++;snprintf(arguments,sizeof(arguments),"%s",text?text:"");snprintf(reply,size,can_busy?"ERR CAN TX FIFO full\r\n":"OK CAN TEST\r\n");}
 HAL_StatusTypeDef CanBus_Send(uint32_t identifier,bool extended,const uint8_t *data,uint8_t length){if(can_busy)return HAL_BUSY;assert(!extended&&data&&length<=8&&sent_count<16);sent_ids[sent_count]=identifier;sent_lengths[sent_count]=length;memcpy(sent_payloads[sent_count],data,length);sent_count++;return HAL_OK;}
 void HAL_Delay(uint32_t ms){delay_count+=ms;}
 static void background(void){poll_count++;}
@@ -56,6 +56,18 @@ int main(void){
  feed("MOT 2 33\nDISABLE\n");assert(!motors_enabled&&motor_speeds[1]==0);
  feed("LID 257 START\n");assert(strncmp(last_reply,"ERR",3)==0);
  feed("LID 16 STOP\n");assert(strcmp(arguments,"STD 0x19E 12")==0);
+ unsigned lidar_calls=calls;
+ can_devices[0].value.lid_distance=1234U;
+ feed("lidar 1 distance\n");assert(calls==lidar_calls+1&&strcmp(arguments,"STD 0x180 10")==0&&strcmp(last_reply,"OK LIDAR 1 DISTANCE 1234\r\n")==0);
+ feed("LIDAR 1 DISTANCE\n");assert(calls==lidar_calls+1);
+ feed("LID 1 STOP\nLIDAR 1 DISTANCE\n");assert(calls==lidar_calls+3&&strcmp(arguments,"STD 0x180 10")==0);
+ feed("LID 16 START\n");lidar_calls=calls;
+ feed("LIDAR 16 DISTANCE\n");assert(calls==lidar_calls&&strstr(last_reply,"no active LID"));
+ feed("LIDAR 0 DISTANCE\nLIDAR 257 DISTANCE\nLIDAR -1 DISTANCE\nLIDAR 1 DISTANCE EXTRA\nLIDAR 1\n");assert(calls==lidar_calls&&strncmp(last_reply,"ERR",3)==0);
+ can_busy=true;feed("LIDAR 2 DISTANCE\n");assert(calls==lidar_calls+1&&strstr(last_reply,"FIFO full"));
+ can_busy=false;feed("LIDAR 2 DISTANCE\n");assert(calls==lidar_calls+2&&strcmp(arguments,"STD 0x182 10")==0);
+ can_busy=true;feed("LID 1 STOP\n");lidar_calls=calls;
+ can_busy=false;feed("LIDAR 1 DISTANCE\n");assert(calls==lidar_calls&&strstr(last_reply,"DISTANCE 1234"));
  feed("COL ILLUMINATION -4294967295\n");assert(sent_count==6&&strncmp(last_reply,"ERR",3)==0);
  UsbCommands_SetPollFunction(background);can_busy=true;delay_count=poll_count=0;
  feed("CHANGE 180 F\n");assert(strncmp(last_reply,"ERR",3)==0&&delay_count==20&&poll_count==20);

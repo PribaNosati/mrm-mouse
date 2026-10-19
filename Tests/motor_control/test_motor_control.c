@@ -25,7 +25,11 @@ void Error_Handler(void) { assert(0); }
 int main(void)
 {
     MotorControl_Init();
-    assert(started == 15U && !MotorControl_IsEnabled() && sleep_state == GPIO_PIN_RESET);
+    assert(started == 15U && MotorControl_IsEnabled() && sleep_state == GPIO_PIN_SET);
+    for (uint8_t i = 0U; i < MOTOR_COUNT; ++i)
+        assert(htim2.compare[i] == 0U && MotorControl_Get(i + 1U) == 0);
+    assert(MotorControl_Set(1U, 50));
+    MotorControl_Enable(false);
     assert(!MotorControl_Set(1U, 50) && !MotorControl_StartTest());
     MotorControl_Enable(true);
     for (uint8_t i = 1U; i <= MOTOR_COUNT; ++i)

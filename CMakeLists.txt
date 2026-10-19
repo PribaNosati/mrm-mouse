@@ -46,6 +46,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/app_usb_bridge.c
     Core/Src/usb_commands.c
+    Core/Src/lidar.c
     Core/Src/can_bus.c
     Core/Src/can_devices.c
     Core/Src/motor_control.c

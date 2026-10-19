@@ -110,7 +110,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
   AppUsbBridge_Init();
   UsbCommands_SetPollFunction(USBPD_DPM_Poll);
-  MotorControl_Enable(true);
   if (CanBus_Init() != HAL_OK)
   {
     Error_Handler();
