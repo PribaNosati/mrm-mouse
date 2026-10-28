@@ -23,7 +23,7 @@ void lidarStart(uint8_t device_nr, bool start, char *response, size_t capacity)
     }
     uint32_t identifier = 0x180U + (2U * ((uint32_t)device_nr - 1U));
 
-    snprintf(arguments, sizeof(arguments), "STD 0x%lX %02X",
+    snprintf(arguments, sizeof(arguments), "std 0x%lx %02x",
              (unsigned long)identifier,
              start ? COMMAND_SENSORS_MEASURE_CONTINUOUS :
                      COMMAND_SENSORS_MEASURE_STOP);

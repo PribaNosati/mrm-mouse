@@ -64,11 +64,11 @@ static void reply(const char *text)
     }
 }
 
-static void uppercase(char *text)
+static void lowercase(char *text)
 {
     while (*text != '\0')
     {
-        *text = (char)toupper((unsigned char)*text);
+        *text = (char)tolower((unsigned char)*text);
         ++text;
     }
 }
@@ -103,42 +103,42 @@ static void process_line(char *line)
     char *arg1;
     char *arg2;
 
-    uppercase(line);
+    lowercase(line);
     command = strtok(line, " \t"); // Split line into command and arguments, using space and tab as delimiters. Returns first token, or NULL if no tokens found.
     if (command == NULL)
     {
         return;
     }
 
-    if (strcmp(command, "ENABLE") == 0)
+    if (strcmp(command, "enable") == 0)
     {
         MotorControl_Enable(true);
         reply("OK ENABLED\r\n");
     }
-    else if (strcmp(command, "DISABLE") == 0)
+    else if (strcmp(command, "disable") == 0)
     {
         MotorControl_Enable(false);
         reply("OK DISABLED\r\n");
     }
-    else if (strcmp(command, "STOP") == 0)
+    else if (strcmp(command, "stop") == 0)
     {
         MotorControl_StopAll();
         reply("OK STOPPED\r\n");
     }
-    else if (strcmp(command, "STATUS") == 0)
+    else if (strcmp(command, "status") == 0)
     {
         status_reply();
     }
-    else if ((strcmp(command, "HELP") == 0) ||
+    else if ((strcmp(command, "help") == 0) ||
              (strcmp(command, "?") == 0))
     {
-        reply("ENABLE | DISABLE | STOP | STATUS | MOT <1-4> <-100..100> | TEST\r\n");
-        reply("CAN STD|EXT <hex-id> [0..8 hex bytes] | CAN STATUS | CAN RX ON|OFF|STATUS\r\n");
-        reply("DEVICES <start-id> <end-id> | CHANGE <current-id> <new-id>\r\n");
-        reply("LID <1-16> START|STOP | COL ILLUMINATION <0-3>\r\n");
-        reply("LIDAR <1-16> DISTANCE\r\n");
+        reply("enable | disable | stop | status | mot <1-4> <-100..100> | test\r\n");
+        reply("can std|ext <hex-id> [0..8 hex bytes] | can status | can rx on|off|status\r\n");
+        reply("devices <start-id> <end-id> | change <current-id> <new-id>\r\n");
+        reply("lid <1-16> start|stop | col illumination <0-3>\r\n");
+        reply("lidar <1-16> distance\r\n");
     }
-    else if (strcmp(command, "MOT") == 0)
+    else if (strcmp(command, "mot") == 0)
     {
         long motor_number;
         long speed;
@@ -150,7 +150,7 @@ static void process_line(char *line)
         arg2 = strtok(NULL, " \t");
         if ((arg1 == NULL) || (arg2 == NULL) || (strtok(NULL, " \t") != NULL))
         {
-            reply("ERR usage: MOT <1-4> <-100..100>\r\n");
+            reply("ERR usage: mot <1-4> <-100..100>\r\n");
             return;
         }
 
@@ -168,7 +168,7 @@ static void process_line(char *line)
             MotorControl_CancelTest();
             if (!MotorControl_Set((uint8_t)motor_number, (int16_t)speed))
             {
-                reply("ERR motors disabled; send ENABLE\r\n");
+                reply("ERR motors disabled; send enable\r\n");
                 return;
             }
         }
@@ -177,7 +177,7 @@ static void process_line(char *line)
                  motor_number, speed);
         reply(response);
     }
-    else if (strcmp(command, "CAN") == 0)
+    else if (strcmp(command, "can") == 0)
     {
         char response[160];
         /* Capture the remaining line before the CAN parser tokenizes it. */
@@ -185,12 +185,12 @@ static void process_line(char *line)
         CanBus_Command(arguments, response, sizeof(response));
         reply(response);
     }
-    else if (strcmp(command, "TEST") == 0)
+    else if (strcmp(command, "test") == 0)
     {
         reply(MotorControl_StartTest() ? "OK TEST STARTED\r\n" :
-              "ERR motors disabled; send ENABLE\r\n");
+              "ERR motors disabled; send enable\r\n");
     }
-    else if (strcmp(command, "LIDAR") == 0)
+    else if (strcmp(command, "lidar") == 0)
     {
         char *end;
         char response[160];
@@ -199,10 +199,10 @@ static void process_line(char *line)
         arg1 = strtok(NULL, " \t");
         arg2 = strtok(NULL, " \t");
         if ((arg1 == NULL) || (arg2 == NULL) ||
-            (strcmp(arg2, "DISTANCE") != 0) ||
+            (strcmp(arg2, "distance") != 0) ||
             (strtok(NULL, " \t") != NULL))
         {
-            reply("ERR usage: LIDAR <1-16> DISTANCE\r\n");
+            reply("ERR usage: lidar <1-16> distance\r\n");
             return;
         }
         device_nr = strtoul(arg1, &end, 10);
@@ -234,15 +234,15 @@ static void process_line(char *line)
                 return;
             }
         }
-        reply("ERR no active LID sensor; run DEVICES first\r\n");
+        reply("ERR no active LID sensor; run devices first\r\n");
     }
-    else if (strcmp(command, "LID") == 0)
+    else if (strcmp(command, "lid") == 0)
     {
         arg1 = strtok(NULL, " \t");
         arg2 = strtok(NULL, " \t");
         if ((arg1 == NULL) || (arg2 == NULL) || (strtok(NULL, " \t") != NULL))
         {
-            reply("ERR usage: LID <device_nr> <START/STOP>\r\n");
+            reply("ERR usage: lid <device_nr> <start/stop>\r\n");
             return;
         }
         char *end1;
@@ -253,20 +253,20 @@ static void process_line(char *line)
             reply("ERR device number=1..16\r\n");
             return;
         }
-        if ((strcmp(arg2, "START") != 0) && (strcmp(arg2, "STOP") != 0))
+        if ((strcmp(arg2, "start") != 0) && (strcmp(arg2, "stop") != 0))
         {
-            reply("ERR usage: LID <device_nr> START|STOP\r\n");
+            reply("ERR usage: lid <device_nr> start|stop\r\n");
             return;
         }
         else
         {
             char response[160];
-            lidarStart((uint8_t)device_nr, strcmp(arg2, "START") == 0,
+            lidarStart((uint8_t)device_nr, strcmp(arg2, "start") == 0,
                        response, sizeof(response));
             reply(response);
         }
     }
-    else if (strcmp(command, "COL") == 0)
+    else if (strcmp(command, "col") == 0)
     {
         char *end;
         unsigned long illumination;
@@ -277,10 +277,10 @@ static void process_line(char *line)
         arg1 = strtok(NULL, " \t");
         arg2 = strtok(NULL, " \t");
         if ((arg1 == NULL) || (arg2 == NULL) ||
-            (strcmp(arg1, "ILLUMINATION") != 0) ||
+            (strcmp(arg1, "illumination") != 0) ||
             (strtok(NULL, " \t") != NULL))
         {
-            reply("ERR usage: COL ILLUMINATION <0-3>\r\n");
+            reply("ERR usage: col illumination <0-3>\r\n");
             return;
         }
 
@@ -312,7 +312,7 @@ static void process_line(char *line)
 
         if (sensors_commanded == 0U)
         {
-            reply("ERR no active COL sensors; run DEVICES first\r\n");
+            reply("ERR no active COL sensors; run devices first\r\n");
             return;
         }
 
@@ -321,7 +321,7 @@ static void process_line(char *line)
                  illumination, (unsigned long)sensors_commanded);
         reply(response);
     }
-    else if (strcmp(command, "CHANGE") == 0)
+    else if (strcmp(command, "change") == 0)
     {
         char *end1;
         char *end2;
@@ -336,7 +336,7 @@ static void process_line(char *line)
         if ((arg1 == NULL) || (arg2 == NULL) ||
             (strtok(NULL, " \t") != NULL))
         {
-            reply("ERR usage: CHANGE <current-id> <new-id>\r\n");
+            reply("ERR usage: change <current-id> <new-id>\r\n");
             return;
         }
 
@@ -347,7 +347,7 @@ static void process_line(char *line)
             (current_identifier > 0x7FFUL) ||
             (new_identifier > 0xFFUL))
         {
-            reply("ERR CHANGE requires current ID 0..7FF and selector 0..FF\r\n");
+            reply("ERR change requires current ID 0..7FF and selector 0..FF\r\n");
             return;
         }
 
@@ -379,7 +379,7 @@ static void process_line(char *line)
             reply("ERR CAN unavailable, bus-off or TX FIFO full\r\n");
         }
     }
-    else if (strcmp(command, "DEVICES") == 0)
+    else if (strcmp(command, "devices") == 0)
     {
         char *end1;
         char *end2;
@@ -393,7 +393,7 @@ static void process_line(char *line)
         if ((arg1 == NULL) || (arg2 == NULL) ||
             (strtok(NULL, " \t") != NULL))
         {
-            reply("ERR usage: DEVICES <start-id> <end-id>\r\n");
+            reply("ERR usage: devices <start-id> <end-id>\r\n");
             return;
         }
 
@@ -446,7 +446,7 @@ static void process_line(char *line)
     }
     else
     {
-        reply("ERR unknown command; send HELP\r\n");
+        reply("ERR unknown command; send help\r\n");
     }
 }
 

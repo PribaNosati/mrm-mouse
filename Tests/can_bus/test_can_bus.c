@@ -38,7 +38,7 @@ int main(void){
     received=0;last_frame[0]=0;
     rx_header.Identifier=0x123;
     CanBus_Command("STD 123 01 02 FF",reply,sizeof(reply));
-    assert(strstr(reply,"OK CAN QUEUED STD 123 3"));assert(starts==1 && sends==1);assert(header.Identifier==0x123 && header.DataLength==3 && payload[2]==0xff);
+    assert(strstr(reply,"OK CAN QUEUED std 123 3"));assert(starts==1 && sends==1);assert(header.Identifier==0x123 && header.DataLength==3 && payload[2]==0xff);
     CanBus_Command("EXT 1FFFFFFF 00 01 02 03 04 05 06 07",reply,sizeof(reply));assert(header.IdType==FDCAN_EXTENDED_ID && header.DataLength==8 && sends==2);
     CanBus_Command("STD 0",reply,sizeof(reply));assert(header.DataLength==0 && sends==3 && starts==1);
     for(unsigned i=0;i<sizeof(bad)/sizeof(bad[0]);i++){CanBus_Command(bad[i],reply,sizeof(reply));assert(strncmp(reply,"ERR",3)==0);assert(sends==3);}
@@ -47,7 +47,7 @@ int main(void){
     CanBus_Command("STATUS",reply,sizeof(reply));assert(strstr(reply,"busoff=1"));
     assert(CanBus_Send(0,false,NULL,1)==HAL_ERROR);
     bus_off=0;
-    CanBus_Command("RX ON",reply,sizeof(reply));assert(strstr(reply,"OK CAN RX ON") && filters==1);
+    CanBus_Command("rx on",reply,sizeof(reply));assert(strstr(reply,"OK CAN RX ON") && filters==1);
     available=1;CanBus_ProcessRx(receive_text);assert(available==1 && received==0 && notifications==1);receive_irq();assert(available==0 && received==0);CanBus_ProcessRx(receive_text);assert(received==1 && strcmp(last_frame,"CAN RX STD 123 3 01 02 FF\r\n")==0);
     rx_header.Identifier=0x1fffffff;rx_header.IdType=FDCAN_EXTENDED_ID;rx_header.DataLength=0;
     available=1;receive_irq();CanBus_ProcessRx(receive_text);assert(strcmp(last_frame,"CAN RX EXT 1FFFFFFF 0\r\n")==0);
@@ -86,7 +86,7 @@ int main(void){
         }
     }
     /* Explicit broad monitoring still forwards even identifiers. */
-    CanBus_Command("RX ON",reply,sizeof(reply));
+    CanBus_Command("rx on",reply,sizeof(reply));
     unsigned before=received;
     rx_header.Identifier=0x180;available=1;receive_irq();CanBus_ProcessRx(receive_text);
     assert(received==before+1);

@@ -1,6 +1,7 @@
 #include "can_bus.h"
 #include "common.h"
 #include "can_devices.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -164,22 +165,24 @@ void CanBus_Command(const char *arguments, char *response, size_t capacity)
     if ((response == NULL) || (capacity == 0U)) return;
     if ((arguments == NULL) || (strlen(arguments) >= sizeof(buffer)))
     {
-        snprintf(response, capacity, "ERR usage: CAN STD|EXT <hex-id> [hex bytes]\r\n");
+        snprintf(response, capacity, "ERR usage: can std|ext <hex-id> [hex bytes]\r\n");
         return;
     }
     strcpy(buffer, arguments);
+    for (char *p = buffer; *p != '\0'; ++p)
+        *p = (char)tolower((unsigned char)*p);
     mode = strtok(buffer, " \t");
-    if ((mode != NULL) && (strcmp(mode, "RX") == 0))
+    if ((mode != NULL) && (strcmp(mode, "rx") == 0))
     {
         token = strtok(NULL, " \t");
         if ((token == NULL) || (strtok(NULL, " \t") != NULL))
-            snprintf(response, capacity, "ERR usage: CAN RX ON|OFF|STATUS\r\n");
-        else if (strcmp(token, "ON") == 0)
+            snprintf(response, capacity, "ERR usage: can rx on|off|status\r\n");
+        else if (strcmp(token, "on") == 0)
         {
             if (can_start() != HAL_OK) snprintf(response, capacity, "ERR CAN start failed\r\n");
             else { rx_enabled = true; snprintf(response, capacity, "OK CAN RX ON\r\n"); }
         }
-        else if (strcmp(token, "OFF") == 0)
+        else if (strcmp(token, "off") == 0)
         {
             uint32_t primask = __get_PRIMASK();
             __disable_irq();
@@ -189,19 +192,19 @@ void CanBus_Command(const char *arguments, char *response, size_t capacity)
             __set_PRIMASK(primask);
             snprintf(response, capacity, "OK CAN RX OFF\r\n");
         }
-        else if (strcmp(token, "STATUS") == 0)
+        else if (strcmp(token, "status") == 0)
             snprintf(response, capacity, "OK CAN RX %s forwarded=%lu dropped=%lu errors=%lu queued=%u hw_lost=%lu\r\n",
                 rx_enabled ? "ON" : "OFF", (unsigned long)rx_forwarded,
                 (unsigned long)rx_dropped, (unsigned long)rx_errors, (unsigned int)rx_count, (unsigned long)rx_hw_lost);
-        else snprintf(response, capacity, "ERR usage: CAN RX ON|OFF|STATUS\r\n");
+        else snprintf(response, capacity, "ERR usage: can rx on|off|status\r\n");
         return;
     }
-    if ((mode != NULL) && (strcmp(mode, "STATUS") == 0))
+    if ((mode != NULL) && (strcmp(mode, "status") == 0))
     {
         FDCAN_ProtocolStatusTypeDef protocol = {0};
         FDCAN_ErrorCountersTypeDef counters = {0};
         if (strtok(NULL, " \t") != NULL)
-            snprintf(response, capacity, "ERR usage: CAN STATUS\r\n");
+            snprintf(response, capacity, "ERR usage: can status\r\n");
         else if ((HAL_FDCAN_GetProtocolStatus(&hfdcan1, &protocol) != HAL_OK) ||
                  (HAL_FDCAN_GetErrorCounters(&hfdcan1, &counters) != HAL_OK))
             snprintf(response, capacity, "ERR CAN status unavailable\r\n");
@@ -213,11 +216,11 @@ void CanBus_Command(const char *arguments, char *response, size_t capacity)
                 (unsigned long)HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1));
         return;
     }
-    if ((mode == NULL) || ((strcmp(mode, "STD") != 0) && (strcmp(mode, "EXT") != 0)))
+    if ((mode == NULL) || ((strcmp(mode, "std") != 0) && (strcmp(mode, "ext") != 0)))
     {
-        snprintf(response, capacity, "ERR usage: CAN STD|EXT <hex-id> [hex bytes]\r\n"); return;
+        snprintf(response, capacity, "ERR usage: can std|ext <hex-id> [hex bytes]\r\n"); return;
     }
-    extended = strcmp(mode, "EXT") == 0;
+    extended = strcmp(mode, "ext") == 0;
     if (!parse_hex(strtok(NULL, " \t"), extended ? 0x1FFFFFFFU : 0x7FFU, &identifier))
     {
         snprintf(response, capacity, "ERR CAN identifier out of range or invalid hex\r\n"); return;
@@ -236,5 +239,5 @@ void CanBus_Command(const char *arguments, char *response, size_t capacity)
     else if (result == HAL_BUSY)
         snprintf(response, capacity, "ERR CAN TX FIFO full\r\n");
     else
-        snprintf(response, capacity, "ERR CAN unavailable or bus-off; send CAN STATUS\r\n");
+        snprintf(response, capacity, "ERR CAN unavailable or bus-off; send can status\r\n");
 }

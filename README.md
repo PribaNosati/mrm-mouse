@@ -9,44 +9,44 @@ illumination control, motor control, and the status LED heartbeat.
 
 Connect a serial terminal or RobotBlocks to the USB COM port. Send one command
 per line with LF, CR, or CRLF; commands are case-insensitive. Motor numbers and
-speeds are decimal; CAN identifiers, payload bytes and CHANGE selectors are hex.
+speeds are decimal; CAN identifiers, payload bytes and change selectors are hex.
 
 | Command | Behavior |
 | --- | --- |
-| `HELP` or `?` | List commands. |
-| `ENABLE` | Clear speeds and wake the motor drivers. |
-| `DISABLE` | Stop all four motors and put the drivers to sleep. |
-| `STOP` | Stop all motors and cancel a running motor test. |
-| `STATUS` | Report driver state and M1 through M4 speeds. |
-| `MOT <1-4> <-100..100>` | Set one motor's signed speed; requires ENABLE. Other motors retain their speeds. |
-| `TEST` | Run all four motors through 0 to +100 to -100 to 0, then stop (about 20 seconds). Requires ENABLE; STOP, DISABLE or a MOT command cancels the sweep. |
-| `CAN STD <id> [bytes]` | Queue an 11-bit data frame, ID 0..7FF, zero to eight bytes. |
-| `CAN EXT <id> [bytes]` | Queue a 29-bit data frame, ID 0..1FFFFFFF, zero to eight bytes. |
-| `CAN STATUS` | Report controller state, bus-off/passive flags, error counters and FIFO space. |
-| `CAN RX ON` | Forward all standard and extended data identifiers (default). |
-| `CAN RX OFF` | Clear pending reports and forward only odd response identifiers. |
-| `CAN RX STATUS` | Report forwarding mode, delivered/dropped/error counts and queued frames. |
-| `DEVICES <start-id> <end-id>` | Clear the active device list, probe even standard IDs in the inclusive range and list responding devices. |
-| `CHANGE <current-id> <selector>` | Send command 40 plus an 8-bit ID selector; current ID 0..7FF, selector 0..FF (0..F for a discovered lidar). |
-| `LID <1-16> START` | Start continuous lidar measurements at ID 180 + 2 * (number - 1). |
-| `LID <1-16> STOP` | Stop measurements at the corresponding lidar ID. |
-| `LIDAR <1-16> DISTANCE` | Start the lidar if needed, then return its latest stored distance as `OK LIDAR <number> DISTANCE <value>`. Requires the sensor in the discovered device table; the value is zero until its first measurement arrives. |
-| `COL ILLUMINATION <0-3>` | Send command 50 plus the illumination level to every discovered COL sensor, preserving its standard/extended format. |
+| `help` or `?` | List commands. |
+| `enable` | Clear speeds and wake the motor drivers. |
+| `disable` | Stop all four motors and put the drivers to sleep. |
+| `stop` | Stop all motors and cancel a running motor test. |
+| `status` | Report driver state and M1 through M4 speeds. |
+| `mot <1-4> <-100..100>` | Set one motor's signed speed; requires enable. Other motors retain their speeds. |
+| `test` | Run all four motors through 0 to +100 to -100 to 0, then stop (about 20 seconds). Requires enable; stop, disable or a mot command cancels the sweep. |
+| `can std <id> [bytes]` | Queue an 11-bit data frame, ID 0..7FF, zero to eight bytes. |
+| `can ext <id> [bytes]` | Queue a 29-bit data frame, ID 0..1FFFFFFF, zero to eight bytes. |
+| `can status` | Report controller state, bus-off/passive flags, error counters and FIFO space. |
+| `can rx on` | Forward all standard and extended data identifiers (default). |
+| `can rx off` | Clear pending reports and forward only odd response identifiers. |
+| `can rx status` | Report forwarding mode, delivered/dropped/error counts and queued frames. |
+| `devices <start-id> <end-id>` | Clear the active device list, probe even standard IDs in the inclusive range and list responding devices. |
+| `change <current-id> <selector>` | Send command 40 plus an 8-bit ID selector; current ID 0..7FF, selector 0..FF (0..F for a discovered lidar). |
+| `lid <1-16> start` | Start continuous lidar measurements at ID 180 + 2 * (number - 1). |
+| `lid <1-16> stop` | Stop measurements at the corresponding lidar ID. |
+| `lidar <1-16> distance` | Start the lidar if needed, then return its latest stored distance as `OK LIDAR <number> DISTANCE <value>`. Requires the sensor in the discovered device table; the value is zero until its first measurement arrives. |
+| `col illumination <0-3>` | Send command 50 plus the illumination level to every discovered COL sensor, preserving its standard/extended format. |
 
 Example session:
 
 ```text
-ENABLE
-MOT 1 25
-MOT 2 -25
-STATUS
-STOP
-DISABLE
-CAN STD 123 01 02 FF
-CAN EXT 1ABCDE 10 20
-DEVICES 180 19E
-LID 1 START
-CAN RX STATUS
+enable
+mot 1 25
+mot 2 -25
+status
+stop
+disable
+can std 123 01 02 ff
+can ext 1abcde 10 20
+devices 180 19e
+lid 1 start
+can rx status
 ```
 
 CAN reports have the format `CAN RX STD 181 3 13 34 12`, terminated with CRLF.

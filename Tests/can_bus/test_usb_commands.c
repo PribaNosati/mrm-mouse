@@ -28,9 +28,9 @@ int16_t MotorControl_Get(uint8_t motor){assert(motor>=1&&motor<=4);return motor_
 static void reply(const char *text,uint16_t size){assert(size<sizeof(last_reply));memcpy(last_reply,text,size);last_reply[size]=0;}
 static void feed(const char *text){UsbCommands_Receive((const uint8_t *)text,(uint32_t)strlen(text));UsbCommands_Process();}
 int main(void){
- UsbCommands_Init(reply);feed("can std 123 ");assert(calls==0);feed("01 ff\r\n");assert(calls==1 && strcmp(arguments,"STD 123 01 FF")==0);
+ UsbCommands_Init(reply);feed("can std 123 ");assert(calls==0);feed("01 ff\r\n");assert(calls==1 && strcmp(arguments,"std 123 01 ff")==0);
  char longline[120];memset(longline,'X',64);strcpy(longline+64,"CAN STD 123 FF\n");feed(longline);assert(calls==1 && strstr(last_reply,"too long"));
- feed("CAN STATUS\n");assert(calls==2 && strcmp(arguments,"STATUS")==0);
+ feed("CAN STATUS\n");assert(calls==2 && strcmp(arguments,"status")==0);
  feed("DEVICES 1 7\n");assert(sent_count==3 && sent_ids[0]==2 && sent_ids[1]==4 && sent_ids[2]==6);assert(sent_lengths[0]==1 && sent_payloads[0][0]==0xFF);assert(strstr(last_reply,"NONE ACTIVE"));
  feed("DEVICES 8 2\n");assert(sent_count==3 && strncmp(last_reply,"ERR",3)==0);
  feed("DEVICES 0 800\n");assert(sent_count==3 && strncmp(last_reply,"ERR",3)==0);
@@ -48,24 +48,24 @@ int main(void){
  feed("COL ILLUMINATION -1\n");assert(sent_count==6 && strstr(last_reply,"0..3"));
  feed("COL 2\n");assert(sent_count==6 && strstr(last_reply,"usage"));
  feed("MOT 1 25\n");assert(strstr(last_reply,"disabled"));
- feed("ENABLE\nMOT 1 25\nMOT 4 -100\nSTATUS\n");assert(motors_enabled&&motor_speeds[0]==25&&motor_speeds[3]==-100);assert(strstr(last_reply,"M1=25")&&strstr(last_reply,"M4=-100"));
+ feed("enable\nmot 1 25\nmot 4 -100\nstatus\n");assert(motors_enabled&&motor_speeds[0]==25&&motor_speeds[3]==-100);assert(strstr(last_reply,"M1=25")&&strstr(last_reply,"M4=-100"));
  feed("MOT 5 25\n");assert(strncmp(last_reply,"ERR",3)==0);
  feed("MOT 1 101\n");assert(motor_speeds[0]==25&&strncmp(last_reply,"ERR",3)==0);
  feed("MOT 1 1 EXTRA\n");assert(motor_speeds[0]==25&&strstr(last_reply,"usage"));
  feed("STOP\n");assert(motor_speeds[0]==0&&motor_speeds[3]==0);
  feed("MOT 2 33\nDISABLE\n");assert(!motors_enabled&&motor_speeds[1]==0);
  feed("LID 257 START\n");assert(strncmp(last_reply,"ERR",3)==0);
- feed("LID 16 STOP\n");assert(strcmp(arguments,"STD 0x19E 12")==0);
+ feed("LID 16 STOP\n");assert(strcmp(arguments,"std 0x19e 12")==0);
  unsigned lidar_calls=calls;
  can_devices[0].value.lid_distance=1234U;
- feed("lidar 1 distance\n");assert(calls==lidar_calls+1&&strcmp(arguments,"STD 0x180 10")==0&&strcmp(last_reply,"OK LIDAR 1 DISTANCE 1234\r\n")==0);
+ feed("lidar 1 distance\n");assert(calls==lidar_calls+1&&strcmp(arguments,"std 0x180 10")==0&&strcmp(last_reply,"OK LIDAR 1 DISTANCE 1234\r\n")==0);
  feed("LIDAR 1 DISTANCE\n");assert(calls==lidar_calls+1);
- feed("LID 1 STOP\nLIDAR 1 DISTANCE\n");assert(calls==lidar_calls+3&&strcmp(arguments,"STD 0x180 10")==0);
+ feed("LID 1 STOP\nLIDAR 1 DISTANCE\n");assert(calls==lidar_calls+3&&strcmp(arguments,"std 0x180 10")==0);
  feed("LID 16 START\n");lidar_calls=calls;
  feed("LIDAR 16 DISTANCE\n");assert(calls==lidar_calls&&strstr(last_reply,"no active LID"));
  feed("LIDAR 0 DISTANCE\nLIDAR 257 DISTANCE\nLIDAR -1 DISTANCE\nLIDAR 1 DISTANCE EXTRA\nLIDAR 1\n");assert(calls==lidar_calls&&strncmp(last_reply,"ERR",3)==0);
  can_busy=true;feed("LIDAR 2 DISTANCE\n");assert(calls==lidar_calls+1&&strstr(last_reply,"FIFO full"));
- can_busy=false;feed("LIDAR 2 DISTANCE\n");assert(calls==lidar_calls+2&&strcmp(arguments,"STD 0x182 10")==0);
+ can_busy=false;feed("LIDAR 2 DISTANCE\n");assert(calls==lidar_calls+2&&strcmp(arguments,"std 0x182 10")==0);
  can_busy=true;feed("LID 1 STOP\n");lidar_calls=calls;
  can_busy=false;feed("LIDAR 1 DISTANCE\n");assert(calls==lidar_calls&&strstr(last_reply,"DISTANCE 1234"));
  feed("COL ILLUMINATION -4294967295\n");assert(sent_count==6&&strncmp(last_reply,"ERR",3)==0);
